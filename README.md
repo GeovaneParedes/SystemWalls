@@ -1,6 +1,6 @@
 # 🛒 SystemWalls — WMS & ERP de Gestão para Supermercados Enterprise
 
-> **Em Breve:** A solução definitiva para gestão operacional de supermercados, controle de estoque de alta precisão (FEFO/FIFO), conferência cega de NFe, auditoria tributária e vendas de altíssima concorrência.
+> **Plataforma Corporativa de Gestão de Supermercados:** Solução completa para controle operacional de supermercados, estoque de alta precisão (FEFO/FIFO), conferência cega de NFe, inteligência tributária e vendas de altíssima concorrência.
 
 ---
 
@@ -8,7 +8,7 @@
 
 O **SystemWalls** é uma plataforma corporativa completa desenvolvida para resolver as dores operacionais reais de supermercados e atacarejos de médio e grande porte. 
 
-O sistema integra em tempo real a área administrativa, o recebimento de mercadorias no depósito, o endereçamento físico de paletes e os coletores de dados dos operadores de estoque.
+O sistema integra em tempo real a área administrativa, o recebimento de mercadorias no depósito, o endereçamento físico de paletes, a persistência com **PostgreSQL 16** e a comunicação WebSocket com coletores de dados dos operadores de estoque.
 
 ---
 
@@ -38,20 +38,21 @@ O sistema integra em tempo real a área administrativa, o recebimento de mercado
 ## 🛠️ Stack Tecnológica de Alta Escala
 
 - **Frontend & PWA:** React 18, Vite, Tailwind CSS, Lucide Icons.
-- **Backend & APIs:** Node.js Fastify (TypeScript) / Java 21 Spring Boot.
-- **Banco de Dados:** PostgreSQL 16 (Relacional ACID com suporte JSONB).
+- **Backend & APIs:** Fastify (TypeScript) com suporte a WebSockets e Pool de Conexões `pg`.
+- **Banco de Dados:** PostgreSQL 16 Alpine (Relacional ACID com Schema em `init.sql`).
 - **Cache & Concorrência:** Redis (Distributed Locking / Mutex).
-- **Mensageria & EDA:** RabbitMQ (Event-Driven Architecture).
-- **DevOps & Cloud:** Docker, Docker Compose, GitHub Actions CI/CD.
+- **DevOps & Cloud:** Docker, Docker Compose (Healthchecks), GitHub Actions CI/CD.
 
 ---
 
 ## 📅 Roadmap de Desenvolvimento
 
 - [x] **Fase 0:** Definição da Arquitetura & Lançamento do Repositório (`SystemWalls`)
-- [ ] **Fase 1:** Desenvolvimento do Frontend (Dashboard Admin & PWA Coletor)
-- [ ] **Fase 2:** Desenvolvimento do Backend (Serviços REST/WebSocket & Banco de Dados)
-- [ ] **Fase 3:** Integração de NFe, FEFO e Testes de Alta Concorrência
+- [x] **Fase 1:** Desenvolvimento do Frontend (Dashboard Admin, WMS FEFO & PWA Coletor)
+- [x] **Fase 2:** Backend Fastify + WebSockets + Docker Compose + GitHub Actions CI/CD
+- [x] **Fase 3.1:** Integração do PostgreSQL 16 (Schema `init.sql`, Pool `pg` e Docker Volume)
+- [ ] **Fase 3.2:** Upload & Parser de Arquivos XML de NFe
+- [ ] **Fase 3.3:** Concorrência Distribuída de Estoque com Redis Mutex
 
 ---
 
