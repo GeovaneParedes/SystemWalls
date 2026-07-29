@@ -1,9 +1,10 @@
 import type { Produto, LoteFEFO, EnderecoWMS, ConferenciaNFe } from '../types/wms.js';
+import { pool } from '../db/db.js';
 
 export class WMSCoreService {
-  private produtos: Map<string, Produto> = new Map();
-  private lotes: Map<string, LoteFEFO> = new Map();
-  private enderecos: Map<string, EnderecoWMS> = new Map();
+  private produtosMock: Map<string, Produto> = new Map();
+  private lotesMock: Map<string, LoteFEFO> = new Map();
+  private enderecosMock: Map<string, EnderecoWMS> = new Map();
   private nfeConferencia: ConferenciaNFe;
 
   constructor() {
@@ -63,7 +64,7 @@ export class WMSCoreService {
       },
     ];
 
-    prods.forEach((p) => this.produtos.set(p.id, p));
+    prods.forEach((p) => this.produtosMock.set(p.id, p));
 
     const lotesInit: LoteFEFO[] = [
       {
@@ -92,41 +93,156 @@ export class WMSCoreService {
       },
     ];
 
-    lotesInit.forEach((l) => this.lotes.set(l.id, l));
+    lotesInit.forEach((l) => this.lotesMock.set(l.id, l));
 
     const endInit: EnderecoWMS[] = [
       { id: 'END-01', codigo: 'COR-01-PR-01-N1', corredor: 'Corredor 01', prateleira: 'Prateleira 01', nivel: 'Nível 1 (Picking)', capacidadePaletes: 2, ocupadoPaletes: 2, tipo: 'PICKING' },
       { id: 'END-02', codigo: 'COR-01-PR-01-N2', corredor: 'Corredor 01', prateleira: 'Prateleira 01', nivel: 'Nível 2 (Aéreo)', capacidadePaletes: 4, ocupadoPaletes: 3, tipo: 'ARMAZENAGEM' },
     ];
 
-    endInit.forEach((e) => this.enderecos.set(e.id, e));
+    endInit.forEach((e) => this.enderecosMock.set(e.id, e));
   }
 
-  // --- MÉTODOS PRODUTOS ---
-  public obterProdutos(): Produto[] {
-    return Array.from(this.produtos.values());
+  // --- MÉTODOS PRODUTOS COM SUPORTE POSTGRESQL ---
+  public async obterProdutos(): Promise<Produto[]> {
+    try {
+      const res = await pool.query('SELECT * FROM produtos ORDER BY created_at DESC');
+      if (res.rows.length > 0) {
+        return res.rows.map((row) => ({
+          id: row.id,
+          sku: row.sku,
+          ean: row.ean,
+          nome: row.nome,
+          marca: row.marca,
+          categoria: row.categoria,
+          precoCusto: Number(row.preco_custo),
+          precoVenda: Number(row.preco_venda),
+          fatorConversao: Number(row.fator_conversao),
+          unidadeCompra: row.unidade_compra,
+          unidadeVenda: row.unidade_venda,
+          ncm: row.ncm,
+          cest: row.cest,
+          fornecedor: row.fornecedor,
+          estoqueAtual: Number(row.estoque_atual),
+          estoqueMinimo: Number(row.estoque_minimo),
+        }));
+      }
+    } catch (err) {
+      console.warn('⚠️ PostgreSQL offline ou não acessível. Utilizando fallback em memória.');
+    }
+    return Array.from(this.produtosMock.values());
   }
 
-  public cadastrarProduto(prod: Omit<Produto, 'id'>): Produto {
+  public async cadastrarProduto(prod: Omit<Produto, 'id'>): Promise<Produto> {
     const id = `PROD-${Date.now().toString().slice(-4)}`;
     const novoProduto: Produto = { ...prod, id };
-    this.produtos.set(id, novoProduto);
+
+    try {
+      await pool.query(
+        `INSERT INTO produtos (id, sku, ean, nome, marca, categoria, preco_custo, preco_venda, fator_conversao, unidade_compra, unidade_venda, ncm, cest, fornecedor, estoque_atual, estoque_minimo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        [
+          novoProduto.id,
+          novoProduto.sku,
+          novoProduto.ean,
+          novoProduto.nome,
+          novoProduto.marca,
+          novoProduto.categoria,
+          novoProduto.precoCusto,
+          novoProduto.precoVenda,
+          novoProduto.fatorConversao,
+          novoProduto.unidadeCompra,
+          novoProduto.unidadeVenda,
+          novoProduto.ncm,
+          novoProduto.cest,
+          novoProduto.fornecedor,
+          novoProduto.estoqueAtual,
+          novoProduto.estoqueMinimo,
+        ]
+      );
+    } catch (err) {
+      console.warn('⚠️ Falha ao salvar no PostgreSQL. Gravando em fallback na memória.');
+      this.produtosMock.set(id, novoProduto);
+    }
+
     return novoProduto;
   }
 
-  public buscarPorEAN(ean: string): Produto | undefined {
-    return Array.from(this.produtos.values()).find((p) => p.ean === ean);
+  public async buscarPorEAN(ean: string): Promise<Produto | undefined> {
+    try {
+      const res = await pool.query('SELECT * FROM produtos WHERE ean = $1 LIMIT 1', [ean]);
+      if (res.rows.length > 0) {
+        const row = res.rows[0];
+        return {
+          id: row.id,
+          sku: row.sku,
+          ean: row.ean,
+          nome: row.nome,
+          marca: row.marca,
+          categoria: row.categoria,
+          precoCusto: Number(row.preco_custo),
+          precoVenda: Number(row.preco_venda),
+          fatorConversao: Number(row.fator_conversao),
+          unidadeCompra: row.unidade_compra,
+          unidadeVenda: row.unidade_venda,
+          ncm: row.ncm,
+          cest: row.cest,
+          fornecedor: row.fornecedor,
+          estoqueAtual: Number(row.estoque_atual),
+          estoqueMinimo: Number(row.estoque_minimo),
+        };
+      }
+    } catch (err) {
+      // Fallback
+    }
+    return Array.from(this.produtosMock.values()).find((p) => p.ean === ean);
   }
 
   // --- MÉTODOS FEFO & WMS ---
-  public obterLotesOrdenadosFEFO(): LoteFEFO[] {
-    return Array.from(this.lotes.values()).sort(
+  public async obterLotesOrdenadosFEFO(): Promise<LoteFEFO[]> {
+    try {
+      const res = await pool.query('SELECT * FROM lotes_fefo ORDER BY data_validade ASC');
+      if (res.rows.length > 0) {
+        return res.rows.map((row) => ({
+          id: row.id,
+          produtoId: row.produto_id,
+          produtoNome: row.produto_nome,
+          ean: row.ean,
+          lote: row.lote,
+          dataValidade: row.data_validade,
+          diasParaVencimento: row.dias_para_vencimento,
+          quantidade: row.quantidade,
+          enderecoCodigo: row.endereco_codigo,
+          status: row.status,
+        }));
+      }
+    } catch (err) {
+      // Fallback
+    }
+    return Array.from(this.lotesMock.values()).sort(
       (a, b) => new Date(a.dataValidade).getTime() - new Date(b.dataValidade).getTime()
     );
   }
 
-  public obterEnderecos(): EnderecoWMS[] {
-    return Array.from(this.enderecos.values());
+  public async obterEnderecos(): Promise<EnderecoWMS[]> {
+    try {
+      const res = await pool.query('SELECT * FROM enderecos_wms');
+      if (res.rows.length > 0) {
+        return res.rows.map((row) => ({
+          id: row.id,
+          codigo: row.codigo,
+          corredor: row.corredor,
+          prateleira: row.prateleira,
+          nivel: row.nivel,
+          capacidadePaletes: row.capacidade_paletes,
+          ocupadoPaletes: row.ocupado_paletes,
+          tipo: row.tipo,
+        }));
+      }
+    } catch (err) {
+      // Fallback
+    }
+    return Array.from(this.enderecosMock.values());
   }
 
   // --- MÉTODOS CONFERÊNCIA CEGA NFE ---
@@ -153,10 +269,5 @@ export class WMSCoreService {
 
   public obterNFeConferencia(): ConferenciaNFe {
     return this.nfeConferencia;
-  }
-
-  // --- MÉTODOS CONVERSÃO DE EMBALAGEM ---
-  public calcularConversaoEntrada(qtdCaixas: number, fatorConversao: number): number {
-    return qtdCaixas * fatorConversao;
   }
 }

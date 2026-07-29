@@ -1,4 +1,23 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: systemwalls_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: systemwalls_user
+      POSTGRES_PASSWORD: systemwalls_pass
+      POSTGRES_DB: systemwalls_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U systemwalls_user -d systemwalls_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -9,6 +28,14 @@ services:
     environment:
       - PORT=8030
       - HOST=0.0.0.0
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=systemwalls_user
+      - POSTGRES_PASSWORD=systemwalls_pass
+      - POSTGRES_DB=systemwalls_db
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
@@ -19,3 +46,6 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+
+volumes:
+  postgres_data:

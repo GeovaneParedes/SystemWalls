@@ -28,31 +28,31 @@ async function bootstrap() {
 
   // Healthcheck
   fastify.get('/health', async () => {
-    return { status: 'OK', sistema: 'SystemWalls ERP/WMS', timestamp: new Date().toISOString() };
+    return { status: 'OK', sistema: 'SystemWalls ERP/WMS (PostgreSQL 16)', timestamp: new Date().toISOString() };
   });
 
   // REST API: Produtos
   fastify.get('/api/produtos', async () => {
-    return wmsService.obterProdutos();
+    return await wmsService.obterProdutos();
   });
 
   fastify.post('/api/produtos', async (req, reply) => {
     const body = req.body as any;
-    const novoProduto = wmsService.cadastrarProduto(body);
+    const novoProduto = await wmsService.cadastrarProduto(body);
     return reply.status(201).send(novoProduto);
   });
 
   // REST API: FEFO & WMS
   fastify.get('/api/wms/fefo', async () => {
-    return wmsService.obterLotesOrdenadosFEFO();
+    return await wmsService.obterLotesOrdenadosFEFO();
   });
 
   fastify.get('/api/wms/enderecos', async () => {
-    return wmsService.obterEnderecos();
+    return await wmsService.obterEnderecos();
   });
 
   // REST API: Conferência NFe
-  fastify.get('/api/nfe/conferência', async () => {
+  fastify.get('/api/nfe/conferencia', async () => {
     return wmsService.obterNFeConferencia();
   });
 
@@ -68,11 +68,11 @@ async function bootstrap() {
       const socket: WebSocket = (connection as any).socket || connection;
       console.log('📱 Coletor Handheld PWA conectado ao hub de telemetria WMS!');
 
-      socket.on('message', (messageRaw: Buffer | string) => {
+      socket.on('message', async (messageRaw: Buffer | string) => {
         try {
           const payload = JSON.parse(messageRaw.toString());
           if (payload.action === 'SCAN_EAN') {
-            const prod = wmsService.buscarPorEAN(payload.ean);
+            const prod = await wmsService.buscarPorEAN(payload.ean);
             socket.send(
               JSON.stringify({
                 type: 'RESULTADO_SCAN',
