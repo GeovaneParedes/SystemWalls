@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: systemwalls_backend
+    restart: always
+    ports:
+      - "8030:8030"
+    environment:
+      - PORT=8030
+      - HOST=0.0.0.0
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: systemwalls_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
